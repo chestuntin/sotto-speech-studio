@@ -194,6 +194,7 @@ realtimeServer.on("connection", (browser) => {
   const openai = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", {
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
   });
+  const pendingEvents = [];
   openai.on("open", () => {
     openai.send(JSON.stringify({
       type: "session.update",
@@ -208,6 +209,7 @@ realtimeServer.on("connection", (browser) => {
         },
       },
     }));
+    for (const event of pendingEvents.splice(0)) openai.send(event);
   });
   openai.on("message", (message) => {
     if (browser.readyState === WebSocket.OPEN) browser.send(message.toString());
@@ -217,11 +219,16 @@ realtimeServer.on("connection", (browser) => {
   });
   openai.on("close", () => { if (browser.readyState === WebSocket.OPEN) browser.close(); });
   browser.on("message", (message) => {
-    if (openai.readyState !== WebSocket.OPEN) return;
     try {
       const event = JSON.parse(message.toString());
-      if (event.type === "audio") openai.send(JSON.stringify({ type: "input_audio_buffer.append", audio: event.audio }));
-      if (event.type === "commit") openai.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+      const relay = event.type === "audio"
+        ? JSON.stringify({ type: "input_audio_buffer.append", audio: event.audio })
+        : event.type === "commit"
+          ? JSON.stringify({ type: "input_audio_buffer.commit" })
+          : null;
+      if (!relay) return;
+      if (openai.readyState === WebSocket.OPEN) openai.send(relay);
+      else pendingEvents.push(relay);
     } catch {
       browser.close(1003, "Invalid realtime event");
     }

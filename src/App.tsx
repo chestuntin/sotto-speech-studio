@@ -14,7 +14,13 @@ function isShiftKey(code: string) {
 }
 
 export default function App() {
-  const [onboardingOpen, setOnboardingOpen] = useState(true);
+  const [onboardingOpen, setOnboardingOpen] = useState(() => {
+    try {
+      return localStorage.getItem("sotto-onboarding-complete") !== "true";
+    } catch {
+      return true;
+    }
+  });
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [title, setTitle] = useState("Voice note");
   const [text, setText] = useState("");
@@ -64,6 +70,7 @@ export default function App() {
 
   const recording = recorder.status === "recording" || recorder.status === "paused";
   const requesting = recorder.status === "requesting";
+  const holding = recording || requesting;
   const busy = recording || requesting || processing;
 
   const persistCurrentNote = useCallback(() => {
@@ -143,6 +150,7 @@ export default function App() {
   }
 
   function finishOnboarding() {
+    try { localStorage.setItem("sotto-onboarding-complete", "true"); } catch { /* Continue without persistence. */ }
     setOnboardingOpen(false);
   }
 
@@ -209,7 +217,7 @@ export default function App() {
   const noteNumber = sessionId ? Math.max(1, sessions.findIndex((session) => session.id === sessionId) + 1) : sessions.length + 1;
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const visibleTime = recording ? recorder.seconds : duration;
-  const status = recording ? "HOLDING — LISTENING" : requesting ? "OPENING MICROPHONE" : processing ? "TURNING VOICE INTO TEXT" : text ? "DRAFT READY" : "READY";
+  const status = holding ? "HOLDING — LISTENING" : processing ? "TURNING VOICE INTO TEXT" : text ? "DRAFT READY" : "READY";
   const recent = sessions.slice(0, 3);
   const touchDevice = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
   const onboardingCopy = onboardingStep === 0
@@ -219,7 +227,7 @@ export default function App() {
       : touchDevice ? "Hold the microphone button to transcribe your speech to text" : "Press Right Shift to transcribe your speech to text";
 
   return (
-    <div className={`sotto-app ${recording ? "is-listening" : ""}`}>
+    <div className={`sotto-app ${holding ? "is-listening" : ""}`}>
       <aside className="note-rail" aria-label="Recent notes">
         <button className="rail-brand" onClick={newNote} aria-label="New Sotto note">sotto</button>
         <nav className="rail-notes">
@@ -274,7 +282,7 @@ export default function App() {
             ) : (
               <button
                 className="push-button"
-                aria-label={recording ? "Release to transcribe" : "Hold to record"}
+                aria-label={holding ? "Release to transcribe" : "Hold to record"}
                 disabled={requesting}
                 onPointerDown={(event) => {
                   if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -297,10 +305,10 @@ export default function App() {
                 }}
                 onContextMenu={(event) => event.preventDefault()}
               >
-                {requesting ? <LoaderCircle className="spin" size={36} /> : <Mic size={42} strokeWidth={2.1} />}
+                <Mic size={42} strokeWidth={2.1} />
               </button>
             )}
-            <span>{processing ? "CANCEL TRANSCRIPTION" : recording ? "RELEASE TO WRITE" : requesting ? "OPENING MICROPHONE" : "HOLD TO SPEAK"}</span>
+            <span>{processing ? "CANCEL TRANSCRIPTION" : holding ? "RELEASE TO WRITE" : "HOLD TO SPEAK"}</span>
           </div>
         </section>
       </main>

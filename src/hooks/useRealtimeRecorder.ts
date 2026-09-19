@@ -40,6 +40,8 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
   const stopping = useRef(false);
   const committedText = useRef("");
   const completionTimer = useRef<number | null>(null);
+  const pendingAudio = useRef<string[]>([]);
+  const pendingCommit = useRef(false);
 
   const cleanup = useCallback(() => {
     if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
@@ -49,6 +51,8 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
     processor.current = null;
     const currentSocket = socket.current;
     socket.current = null;
+    pendingAudio.current = [];
+    pendingCommit.current = false;
     if (currentSocket) {
       currentSocket.onclose = null;
       currentSocket.onerror = null;
@@ -89,7 +93,7 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
     if (socket.current.readyState === WebSocket.OPEN) {
       socket.current.send(JSON.stringify({ type: "commit" }));
       completionTimer.current = window.setTimeout(() => fail("Live transcription timed out. Please try again."), 15_000);
-    }
+    } else pendingCommit.current = true;
   }, [fail, status]);
 
   const start = useCallback(async () => {
@@ -123,17 +127,25 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
         else if (event.type === "conversation.item.input_audio_transcription.delta") committedText.current += event.delta || "";
         else if (event.type === "conversation.item.input_audio_transcription.completed") { committedText.current = event.transcript || committedText.current; complete(); }
       };
+      connection.onopen = () => {
+        for (const audio of pendingAudio.current) connection.send(JSON.stringify({ type: "audio", audio }));
+        pendingAudio.current = [];
+        if (pendingCommit.current) {
+          connection.send(JSON.stringify({ type: "commit" }));
+          pendingCommit.current = false;
+          completionTimer.current = window.setTimeout(() => fail("Live transcription timed out. Please try again."), 15_000);
+        }
+      };
       connection.onerror = () => fail("Could not connect to the realtime transcription server.");
       connection.onclose = () => { if (!stopping.current && mounted.current) fail("The realtime transcription connection closed. Please try again."); };
-      await new Promise<void>((resolve, reject) => {
-        connection.onopen = () => resolve();
-        connection.addEventListener("error", () => reject(new Error("connection")), { once: true });
-      });
       if (!mounted.current) return;
       const recorder = audioContext.createScriptProcessor(4096, 1, 1);
       processor.current = recorder;
       recorder.onaudioprocess = (event) => {
-        if (connection.readyState === WebSocket.OPEN && !stopping.current) connection.send(JSON.stringify({ type: "audio", audio: pcm16Base64(event.inputBuffer.getChannelData(0)) }));
+        if (stopping.current) return;
+        const audio = pcm16Base64(event.inputBuffer.getChannelData(0));
+        if (connection.readyState === WebSocket.OPEN) connection.send(JSON.stringify({ type: "audio", audio }));
+        else pendingAudio.current.push(audio);
       };
       source.connect(recorder);
       recorder.connect(audioContext.destination);
