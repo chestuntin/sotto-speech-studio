@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowDownToLine, Check, Copy, LoaderCircle, Mic, Plus, X } from "lucide-react";
 import { Waveform } from "./components/Waveform";
-import { useRecorder } from "./hooks/useRecorder";
-import { transcribe } from "./lib/transcribe";
+import { useRealtimeRecorder } from "./hooks/useRealtimeRecorder";
 import { download, formatTime, loadSessions, type Session } from "./lib/storage";
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -27,7 +26,6 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [clock, setClock] = useState(() => new Date());
-  const abortRef = useRef<AbortController | null>(null);
   const holdRequested = useRef(false);
   const holdSource = useRef<"pointer" | "keyboard" | null>(null);
   const textArea = useRef<HTMLTextAreaElement>(null);
@@ -39,41 +37,31 @@ export default function App() {
     setSaved(true);
   }, []);
 
-  const runTranscription = useCallback(async (audio: File, length: number) => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+  const finishTranscript = useCallback((result: string, length: number) => {
     setError("");
-    setProcessing(true);
+    setDuration(length);
     setText("");
     setSaved(false);
     setSessionId(null);
-    try {
-      const result = await transcribe(audio, controller.signal, setText);
-      if (!result.trim()) {
-        setError("No speech was detected. Try speaking a little closer to your microphone.");
-        return;
-      }
-      const noteTitle = title === "Voice note" ? `Voice note ${sessions.length + 1}` : title;
-      setTitle(noteTitle);
-      saveSession({ id: crypto.randomUUID(), title: noteTitle, text: result, duration: length, created: Date.now(), model: "gpt-transcribe" });
-      notify("Transcript ready");
-    } catch (cause) {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Transcription failed. Please try again.");
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-        setProcessing(false);
-      }
+    setProcessing(false);
+    if (!result.trim()) {
+      setError("No speech was detected. Try speaking a little closer to your microphone.");
+      return;
     }
+    const noteTitle = title === "Voice note" ? `Voice note ${sessions.length + 1}` : title;
+    setTitle(noteTitle);
+    saveSession({ id: crypto.randomUUID(), title: noteTitle, text: result, duration: length, created: Date.now(), model: "gpt-transcribe" });
+    setText(result);
+    notify("Transcript ready");
   }, [notify, saveSession, sessions.length, title]);
 
-  const onRecordingComplete = useCallback((audio: File, length: number) => {
-    setDuration(length);
-    void runTranscription(audio, length);
-  }, [runTranscription]);
+  const recorder = useRealtimeRecorder(finishTranscript, (message) => {
+    setProcessing(false);
+    setError(message);
+  }, () => {
+    setProcessing(true);
+  });
 
-  const recorder = useRecorder(onRecordingComplete, setError);
   const recording = recorder.status === "recording" || recorder.status === "paused";
   const requesting = recorder.status === "requesting";
   const busy = recording || requesting || processing;
@@ -113,13 +101,15 @@ export default function App() {
     if (holdSource.current !== source) return;
     holdRequested.current = false;
     holdSource.current = null;
-    recorder.stop();
+    if (recording) {
+      recorder.stop();
+    }
   }
 
   function cancelTranscription() {
-    abortRef.current?.abort();
+    recorder.cancel();
     setProcessing(false);
-    setError("Transcription cancelled. Your recording is still available.");
+    setError("Live transcription cancelled.");
   }
 
   function openSession(session: Session) {
@@ -215,7 +205,6 @@ export default function App() {
     };
   });
 
-  useEffect(() => () => abortRef.current?.abort(), []);
 
   const noteNumber = sessionId ? Math.max(1, sessions.findIndex((session) => session.id === sessionId) + 1) : sessions.length + 1;
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;

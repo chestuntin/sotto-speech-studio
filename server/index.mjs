@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import { createServer as createHttpServer } from "node:http";
+import { WebSocket, WebSocketServer } from "ws";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -22,6 +23,7 @@ try {
 
 const app = express();
 const server = createHttpServer(app);
+const realtimeServer = new WebSocketServer({ noServer: true });
 const port = Number(process.env.PORT || 5173);
 const models = new Set([
   "gpt-transcribe",
@@ -179,6 +181,53 @@ if (process.argv.includes("--production")) {
 server.listen(port, "127.0.0.1", () =>
   console.log(`\n  Sotto is ready at http://localhost:${port}\n`),
 );
+server.on("upgrade", (request, socket, head) => {
+  const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
+  if (url.pathname !== "/realtime") return;
+  realtimeServer.handleUpgrade(request, socket, head, (client) => realtimeServer.emit("connection", client, request));
+});
+realtimeServer.on("connection", (browser) => {
+  if (!process.env.OPENAI_API_KEY) {
+    browser.close(1011, "Server transcription key is not configured");
+    return;
+  }
+  const openai = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", {
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+  });
+  openai.on("open", () => {
+    openai.send(JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "transcription",
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "gpt-transcribe" },
+            turn_detection: null,
+          },
+        },
+      },
+    }));
+  });
+  openai.on("message", (message) => {
+    if (browser.readyState === WebSocket.OPEN) browser.send(message.toString());
+  });
+  openai.on("error", () => {
+    if (browser.readyState === WebSocket.OPEN) browser.send(JSON.stringify({ type: "error", error: { message: "OpenAI realtime transcription could not be reached." } }));
+  });
+  openai.on("close", () => { if (browser.readyState === WebSocket.OPEN) browser.close(); });
+  browser.on("message", (message) => {
+    if (openai.readyState !== WebSocket.OPEN) return;
+    try {
+      const event = JSON.parse(message.toString());
+      if (event.type === "audio") openai.send(JSON.stringify({ type: "input_audio_buffer.append", audio: event.audio }));
+      if (event.type === "commit") openai.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+    } catch {
+      browser.close(1003, "Invalid realtime event");
+    }
+  });
+  browser.on("close", () => openai.close());
+});
 server.on("error", (error) => {
   console.error(`Could not start Sotto: ${error.message}`);
   process.exit(1);

@@ -5,6 +5,9 @@
   "functions": {
     "api/transcribe.mjs": {
       "maxDuration": 300
+    },
+    "api/server.mjs": {
+      "maxDuration": 300
     }
   }
 }

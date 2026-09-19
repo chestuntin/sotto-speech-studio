@@ -12,12 +12,14 @@
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource/dm-mono": "^5.2.6",
+    "@types/ws": "^8.18.1",
     "express": "^5.1.0",
     "lucide-react": "^0.468.0",
     "motion": "^12.23.0",
     "multer": "^2.0.2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
