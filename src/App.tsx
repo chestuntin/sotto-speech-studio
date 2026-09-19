@@ -222,6 +222,12 @@ export default function App() {
   const visibleTime = recording ? recorder.seconds : duration;
   const status = recording ? "HOLDING — LISTENING" : requesting ? "OPENING MICROPHONE" : processing ? "TURNING VOICE INTO TEXT" : text ? "DRAFT READY" : "READY";
   const recent = sessions.slice(0, 3);
+  const touchDevice = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  const onboardingCopy = onboardingStep === 0
+    ? touchDevice ? "Hold the microphone button to speak" : "Hold Right Shift to speak"
+    : onboardingStep === 1
+      ? touchDevice ? "Tap Allow this time to enable recording" : "Click Allow this time to enable recording"
+      : touchDevice ? "Hold the microphone button to transcribe your speech to text" : "Press Right Shift to transcribe your speech to text";
 
   return (
     <div className={`sotto-app ${recording ? "is-listening" : ""}`}>
@@ -333,11 +339,11 @@ export default function App() {
                 <button onClick={finishOnboarding}>SKIP</button>
               </div>
               <div className="coachmark-body" key={onboardingStep}>
-                {onboardingStep === 0 && <div className="keycap"><small>RIGHT</small><strong>SHIFT</strong><i>⇧</i></div>}
+                {onboardingStep === 0 && (touchDevice ? <div className="permission-mark"><Mic size={28} /></div> : <div className="keycap"><small>RIGHT</small><strong>SHIFT</strong><i>⇧</i></div>)}
                 {onboardingStep === 1 && <div className="permission-mark"><Mic size={28} /><Check size={16} /></div>}
                 {onboardingStep === 2 && <div className="voice-mark"><i /><i /><i /><i /><i /></div>}
                 <div>
-                  <h2 id="coachmark-title">{onboardingStep === 0 ? "Hold Right Shift to speak" : onboardingStep === 1 ? "Click Allow this time to enable recording" : "Press Right Shift to transcribe your speech to text"}</h2>
+                  <h2 id="coachmark-title">{onboardingCopy}</h2>
                 </div>
               </div>
               <div className="coachmark-actions">
