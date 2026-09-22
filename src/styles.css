@@ -4,13 +4,25 @@
 
 :root {
   font-family: "DM Sans Variable", "Noto Sans Sinhala", "Sinhala Sangam MN", "Nirmala UI", sans-serif;
-  color: #20231f; background: #f3f1ec; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
-  --page: #f3f1ec; --shell: #fbfaf6; --panel: #fff; --panel-soft: #f4f1e9; --text: #20231f;
-  --muted: #6f736c; --line: #deddd6; --accent: #f1643c; --accent-soft: #ffe4d9; --accent-ink: #7f2a15; --success: #58a970;
+  color-scheme: dark;
+  color: light-dark(#20231f, #f4f2ea); background: light-dark(#e7e4dc, #050605); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+  --outside: light-dark(#e7e4dc, #050605);
+  --page: light-dark(#f3f1ec, #10110f);
+  --shell: light-dark(#fbfaf6, #181a17);
+  --panel: light-dark(#ffffff, #20221f);
+  --panel-soft: light-dark(#f4f1e9, #292b27);
+  --text: light-dark(#20231f, #f4f2ea);
+  --muted: light-dark(#6f736c, #aeb2a9);
+  --line: light-dark(#deddd6, #343731);
+  --accent: #f1643c;
+  --accent-soft: light-dark(#ffe4d9, #54281d);
+  --accent-ink: light-dark(#7f2a15, #ffd8cb);
+  --success: #58a970;
 }
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; overflow: hidden; }
-body { margin: 0; min-width: 320px; }
+body { margin: 0; min-width: 320px; background: var(--outside); }
+#root { padding: clamp(18px, 3vw, 44px); display: grid; place-items: center; }
 button, input, textarea { font: inherit; color: inherit; }
 button { border: 0; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .42; }
@@ -18,7 +30,7 @@ button, input, textarea { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(241,100,60,.38); outline-offset: 2px; }
 .spin { animation: spin .85s linear infinite; }
 
-.hela-app { width: 100vw; height: 100vh; height: 100dvh; display: grid; grid-template-columns: clamp(190px,16vw,230px) minmax(0,1fr); background: var(--shell); overflow: hidden; }
+.hela-app { width: min(1180px, 100%); height: min(760px, 100%); display: grid; grid-template-columns: clamp(190px,16vw,220px) minmax(0,1fr); background: var(--shell); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 26px 80px light-dark(rgba(61,52,36,.16), rgba(0,0,0,.38)); overflow: hidden; }
 .app-sidebar { min-width: 0; min-height: 0; padding: 24px 16px 18px; display: flex; flex-direction: column; background: var(--page); border-right: 1px solid var(--line); }
 .brand { min-height: 48px; padding: 0 8px 22px; display: flex; align-items: center; gap: 11px; background: transparent; text-align: left; }
 .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: var(--text); color: var(--shell); }
@@ -27,7 +39,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .brand-copy small { display: block; margin-top: 1px; color: var(--muted); font-size: 10px; }
 .primary-nav { display: grid; gap: 5px; }
 .primary-nav button, .sidebar-bottom > button { width: 100%; min-height: 43px; padding: 0 12px; display: flex; align-items: center; gap: 10px; border-radius: 12px; background: transparent; color: var(--muted); font-size: 13px; text-align: left; }
-.primary-nav button:hover, .sidebar-bottom > button:hover { color: var(--text); background: rgba(255,255,255,.58); }
+.primary-nav button:hover, .sidebar-bottom > button:hover { color: var(--text); background: color-mix(in srgb, var(--panel) 62%, transparent); }
 .primary-nav button.active { color: var(--text); background: var(--panel); box-shadow: 0 1px 3px rgba(50,45,34,.06); }
 .primary-nav svg, .sidebar-bottom svg { width: 17px; flex: none; }
 .primary-nav em { margin-left: auto; min-width: 22px; padding: 3px 6px; border-radius: 8px; background: var(--panel-soft); color: var(--muted); font-size: 10px; font-style: normal; text-align: center; }
@@ -47,7 +59,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .language-pill, .new-note-button { height: 37px; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 11px; white-space: nowrap; }
 .language-pill svg, .new-note-button svg { width: 15px; }
-.new-note-button { background: var(--text); border-color: var(--text); color: #fff; }
+.new-note-button { background: var(--text); border-color: var(--text); color: var(--shell); }
 .workspace { min-height: 0; min-width: 0; display: grid; grid-template-columns: minmax(280px,.78fr) minmax(400px,1.22fr); gap: 15px; }
 .recorder-card, .transcript-card { min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); overflow: hidden; }
 .recorder-card { padding: clamp(16px,1.8vw,24px); display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
@@ -64,11 +76,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .is-recording .mic-orbit { background: var(--accent-soft); transform: scale(.97); }
 .is-recording .mic-orbit::before, .is-recording .mic-orbit::after { opacity: 1; animation: pulse 1.7s ease-out infinite; }
 .is-recording .mic-orbit::after { animation-delay: .4s; }
-.mic-button { width: clamp(76px,8vw,94px); height: clamp(76px,8vw,94px); border-radius: 50%; display: grid; place-items: center; background: var(--text); color: #fff; box-shadow: 0 12px 28px rgba(31,35,30,.18); transition: .18s ease; }
+.mic-button { width: clamp(76px,8vw,94px); height: clamp(76px,8vw,94px); border-radius: 50%; display: grid; place-items: center; background: var(--text); color: var(--shell); box-shadow: 0 12px 28px light-dark(rgba(31,35,30,.18), rgba(0,0,0,.34)); transition: .18s ease; }
 .mic-button:hover { transform: scale(1.025); }
 .mic-button:active { transform: scale(.96); }
 .mic-button svg { width: 30px; height: 30px; }
-.is-recording .mic-button, .mic-button.processing { background: var(--accent); }
+.is-recording .mic-button, .mic-button.processing { background: var(--accent); color: #fff; }
 .stop-mark { width: 21px; height: 21px; border-radius: 6px; background: #fff; }
 .recording-stage > strong { margin-top: clamp(22px,3vh,32px); font-size: clamp(15px,1.35vw,18px); font-weight: 600; }
 .recording-stage > span { max-width: 270px; margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: center; }
@@ -87,15 +99,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .copy-button svg, .export-button svg { width: 14px; }
 .editor-shell { position: relative; min-height: 0; border-radius: 15px; background: var(--page); overflow: hidden; }
 .editor-shell textarea { width: 100%; height: 100%; resize: none; border: 0; outline: 0; padding: clamp(18px,2.4vw,30px); background: transparent; color: var(--text); font-family: "Noto Sans Sinhala","Sinhala Sangam MN","Nirmala UI","DM Sans Variable",sans-serif; font-size: clamp(14px,1.35vw,18px); line-height: 1.9; caret-color: var(--accent); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-.editor-shell textarea::placeholder { color: #9b9d97; opacity: 1; }
+.editor-shell textarea::placeholder { color: var(--muted); opacity: .68; }
 .live-caret { position: absolute; left: 30px; bottom: 28px; width: 2px; height: 18px; background: var(--accent); animation: blink 1s step-end infinite; pointer-events: none; }
 .transcript-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .trust-notes { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 9px; }
 .trust-notes span { display: flex; align-items: center; gap: 5px; }
 .trust-notes svg { width: 13px; }
-.export-button { background: var(--text); color: #fff; }
+.export-button { background: var(--text); color: var(--shell); }
 
-.history-drawer { position: absolute; z-index: 20; top: 78px; bottom: 28px; left: 28px; width: min(360px,calc(100% - 56px)); padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 26px 70px rgba(41,37,29,.18); backdrop-filter: blur(14px); overflow: hidden; display: grid; grid-template-rows: auto minmax(0,1fr); gap: 15px; }
+.history-drawer { position: absolute; z-index: 20; top: 78px; bottom: 28px; left: 28px; width: min(360px,calc(100% - 56px)); padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--panel) 96%, transparent); box-shadow: 0 26px 70px light-dark(rgba(41,37,29,.18), rgba(0,0,0,.4)); backdrop-filter: blur(14px); overflow: hidden; display: grid; grid-template-rows: auto minmax(0,1fr); gap: 15px; }
 .drawer-heading { display: flex; justify-content: space-between; align-items: flex-start; }
 .drawer-heading span { color: var(--muted); font-size: 9px; }
 .drawer-heading h2 { margin: 3px 0 0; font-size: 20px; }
@@ -114,14 +126,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .empty-history span { max-width: 190px; margin-top: 6px; font-size: 10px; line-height: 1.5; }
 
 .onboarding-overlay { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(29,31,28,.42); backdrop-filter: blur(5px); }
-.welcome-card { width: min(430px,100%); padding: 34px; border-radius: 22px; background: var(--panel); box-shadow: 0 30px 90px rgba(0,0,0,.24); text-align: center; }
+.welcome-card { width: min(430px,100%); padding: 34px; border: 1px solid var(--line); border-radius: 22px; background: var(--panel); box-shadow: 0 30px 90px rgba(0,0,0,.34); text-align: center; }
 .welcome-mark { width: 62px; height: 62px; margin: 0 auto 20px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
 .welcome-mark svg { width: 25px; }
 .welcome-card > p { margin: 0 0 8px; color: var(--accent-ink); font-size: 10px; font-weight: 600; }
 .welcome-card h2 { margin: 0; font-size: 25px; line-height: 1.35; }
 .welcome-card > span:not(.welcome-mark) { display: block; margin: 14px auto 22px; max-width: 340px; color: var(--muted); font-size: 12px; line-height: 1.65; }
 .welcome-actions { display: flex; flex-direction: column; align-items: center; gap: 7px; }
-.welcome-card button { min-height: 46px; padding: 0 20px; border-radius: 12px; background: var(--text); color: #fff; font-size: 12px; }
+.welcome-card button { min-height: 46px; padding: 0 20px; border-radius: 12px; background: var(--text); color: var(--shell); font-size: 12px; }
 .welcome-card .skip-button { min-height: 32px; background: transparent; color: var(--muted); }
 .welcome-card small { display: block; margin-top: 13px; color: var(--muted); font-size: 9px; }
 .toast { position: fixed; z-index: 120; left: 50%; bottom: 20px; transform: translateX(-50%); min-height: 44px; max-width: min(560px,calc(100vw - 32px)); padding: 10px 13px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 12px 34px rgba(34,31,25,.16); font-size: 11px; }
@@ -129,7 +141,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .toast span { flex: 1; }
 .toast button { width: 28px; height: 28px; display: grid; place-items: center; background: transparent; }
 .toast button svg { width: 15px; }
-.toast.success { background: var(--text); border-color: var(--text); color: #fff; }
+.toast.success { background: var(--text); border-color: var(--text); color: var(--shell); }
 .toast.error { color: #8a291d; }
 
 @media (max-width: 960px) {
@@ -142,7 +154,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   .workspace { grid-template-columns: minmax(245px,.72fr) minmax(360px,1.28fr); }
 }
 @media (max-width: 720px) {
+  #root { padding: 0; }
   .hela-app { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) 64px; }
+  .hela-app { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; }
   .app-sidebar { grid-row: 2; z-index: 30; padding: 0 14px; border-top: 1px solid var(--line); border-right: 0; flex-direction: row; justify-content: space-around; }
   .brand, .account { display: none; }
   .primary-nav { display: flex; gap: 8px; }
