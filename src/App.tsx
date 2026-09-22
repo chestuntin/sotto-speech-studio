@@ -1,14 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  AudioWaveform, Check, ChevronDown, CircleHelp, Copy, Download, FileText,
-  History, LoaderCircle, Mic, Mic2, Plus, Radio, ShieldCheck, Sparkles, X,
+  AudioWaveform, Check, ChevronDown, CircleHelp, CircleOff, Copy, Download, FileText,
+  Grid3X3, History, LoaderCircle, Mic, Mic2, Moon, Plus, Radio, ShieldCheck, Sparkles, Sun, X,
 } from "lucide-react";
 import { Waveform } from "./components/Waveform";
 import { useRealtimeRecorder } from "./hooks/useRealtimeRecorder";
 import { download, formatTime, loadSessions, type Session } from "./lib/storage";
 
 const DEFAULT_TITLE = "නව හඬ සටහන";
+type BackgroundMode = "none" | "matrix" | "grid";
+const BACKGROUND_MODES: BackgroundMode[] = ["none", "matrix", "grid"];
+const BACKGROUND_LABELS: Record<BackgroundMode, string> = {
+  none: "අක්‍රීය",
+  matrix: "සිංහල අකුරු",
+  grid: "සංඥා ජාලය",
+};
 const isShiftKey = (code: string) => code === "ShiftLeft" || code === "ShiftRight";
 const SINHALA_ALPHABET = [
   "අ", "ආ", "ඇ", "ඈ", "ඉ", "ඊ", "උ", "ඌ", "ඍ", "ඎ", "ඏ", "ඐ", "එ", "ඒ", "ඓ", "ඔ", "ඕ", "ඖ",
@@ -30,6 +37,16 @@ const SIGNAL_COLUMNS = (["left", "right"] as const).flatMap((side, sideIndex) =>
 );
 
 export default function App() {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    try { return localStorage.getItem("sotto-theme") === "light" ? "light" : "dark"; }
+    catch { return "dark"; }
+  });
+  const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
+    try {
+      const stored = localStorage.getItem("sotto-background-mode");
+      return stored === "matrix" || stored === "grid" ? stored : "none";
+    } catch { return "none"; }
+  });
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
     try { return localStorage.getItem("sotto-onboarding-complete") !== "true"; }
     catch { return true; }
@@ -85,6 +102,10 @@ export default function App() {
   const requesting = recorder.status === "requesting";
   const busy = recording || requesting || processing;
   const visibleTime = recording ? recorder.seconds : duration;
+
+  const cycleBackground = useCallback(() => {
+    setBackgroundMode((current) => BACKGROUND_MODES[(BACKGROUND_MODES.indexOf(current) + 1) % BACKGROUND_MODES.length]);
+  }, []);
 
   const persistCurrentNote = useCallback(() => {
     if (!saved || !sessionId) return;
@@ -174,6 +195,13 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem("sotto-transcription-language", language); } catch { /* Continue without persistence. */ }
   }, [language]);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("sotto-theme", theme); } catch { /* Continue without persistence. */ }
+  }, [theme]);
+  useEffect(() => {
+    try { localStorage.setItem("sotto-background-mode", backgroundMode); } catch { /* Continue without persistence. */ }
+  }, [backgroundMode]);
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
       if (!isShiftKey(event.code) || event.repeat || busy || onboardingOpen) return;
@@ -196,12 +224,14 @@ export default function App() {
   const statusLabel = recording ? "පටිගත වෙමින්" : requesting ? "අවසරය ඉල්ලමින්" : processing ? "පිටපත් කරමින්" : "සූදානම්";
   const prompt = recording ? "මම අසා සිටිමි…" : processing ? "වචන සකසමින්…" : "කතා කිරීම අරඹන්න";
   const helper = recording ? "නවත්වන්න මයික්‍රොෆෝනය තට්ටු කරන්න" : "මයික්‍රොෆෝනය තට්ටු කරන්න හෝ Right Shift අල්ලාගෙන සිටින්න";
+  const nextBackground = BACKGROUND_MODES[(BACKGROUND_MODES.indexOf(backgroundMode) + 1) % BACKGROUND_MODES.length];
 
   return (
     <>
-      <div className="ambient-signal" aria-hidden="true">
-        <div className="signal-glow" />
-        <div className="signal-field signal-left">
+      <div className={`ambient-signal mode-${backgroundMode}`} aria-hidden="true">
+        {backgroundMode === "matrix" && <>
+          <div className="signal-glow" />
+          <div className="signal-field signal-left">
           {SIGNAL_COLUMNS.filter((column) => column.side === "left").map((column, columnIndex) => (
             <span
               className="signal-column"
@@ -219,8 +249,8 @@ export default function App() {
               ))}
             </span>
           ))}
-        </div>
-        <div className="signal-field signal-right">
+          </div>
+          <div className="signal-field signal-right">
           {SIGNAL_COLUMNS.filter((column) => column.side === "right").map((column, columnIndex) => (
             <span
               className="signal-column"
@@ -238,7 +268,9 @@ export default function App() {
               ))}
             </span>
           ))}
-        </div>
+          </div>
+        </>}
+        {backgroundMode === "grid" && <div className="signal-grid" />}
       </div>
       <div className={`hela-app ${recording ? "is-recording" : ""}`}>
       <aside className="app-sidebar" aria-label="ප්‍රධාන මෙනුව">
@@ -268,6 +300,24 @@ export default function App() {
               </select>
               <ChevronDown aria-hidden="true" />
             </label>
+            <button
+              className="display-button"
+              type="button"
+              onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+              aria-label={theme === "dark" ? "ආලෝක තේමාව සක්‍රිය කරන්න" : "අඳුරු තේමාව සක්‍රිය කරන්න"}
+              title={theme === "dark" ? "ආලෝක තේමාව" : "අඳුරු තේමාව"}
+            >
+              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            </button>
+            <button
+              className={`display-button background-button mode-${backgroundMode}`}
+              type="button"
+              onClick={cycleBackground}
+              aria-label={`පසුබිම: ${BACKGROUND_LABELS[backgroundMode]}. ඊළඟ: ${BACKGROUND_LABELS[nextBackground]}`}
+              title={`පසුබිම: ${BACKGROUND_LABELS[backgroundMode]}`}
+            >
+              {backgroundMode === "none" ? <CircleOff aria-hidden="true" /> : backgroundMode === "matrix" ? <Sparkles aria-hidden="true" /> : <Grid3X3 aria-hidden="true" />}
+            </button>
             <button className="new-note-button" onClick={newNote} disabled={busy}><Plus aria-hidden="true" />නව සටහන</button>
           </div>
         </header>
