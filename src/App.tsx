@@ -224,6 +224,17 @@ export default function App() {
               <strong>{prompt}</strong><span>{helper}</span>
             </div>
             <div className="recorder-footer">
+              <AnimatePresence mode="wait">
+                {error ? (
+                  <motion.div className="recorder-feedback error" role="alert" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}>
+                    <span>{error}</span><button onClick={() => setError("")} aria-label="දෝෂය වසන්න"><X /></button>
+                  </motion.div>
+                ) : toast ? (
+                  <motion.div className="recorder-feedback success" role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}>
+                    <Check />{toast}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               <div className="waveform-wrap"><Waveform analyser={recorder.analyser} active={recording} processing={processing} /></div>
               <div className="device-row"><span><Radio aria-hidden="true" />Input</span><strong>{recorder.deviceName}</strong></div>
             </div>
@@ -272,8 +283,6 @@ export default function App() {
             </motion.div>
           </motion.div>
         )}
-        {error && <motion.div className="toast error" role="alert" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><span>{error}</span><button onClick={() => setError("")} aria-label="දෝෂය වසන්න"><X /></button></motion.div>}
-        {toast && <motion.div className="toast success" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><Check />{toast}</motion.div>}
       </AnimatePresence>
     </div>
   );
