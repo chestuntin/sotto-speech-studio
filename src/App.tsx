@@ -10,20 +10,23 @@ import { download, formatTime, loadSessions, type Session } from "./lib/storage"
 
 const DEFAULT_TITLE = "නව හඬ සටහන";
 const isShiftKey = (code: string) => code === "ShiftLeft" || code === "ShiftRight";
-const SIGNAL_COLUMNS = [
-  { side: "left", x: 7, duration: 27, delay: -18, glyphs: ["අ", "ං", "ක", "·", "හ", "ර", "≈", "ත", "ා"] },
-  { side: "left", x: 22, duration: 34, delay: -6, glyphs: ["ව", "ි", "න", "·", "ද", "ු", "⋮", "ම"] },
-  { side: "left", x: 39, duration: 24, delay: -13, glyphs: ["ස", "්", "ප", "≈", "ෙ", "ළ", "·", "ට"] },
-  { side: "left", x: 58, duration: 31, delay: -22, glyphs: ["ක", "ථ", "ා", "⋮", "ව", "ච", "න"] },
-  { side: "left", x: 78, duration: 38, delay: -9, glyphs: ["හ", "ඬ", "·", "ල", "ි", "ය", "≈", "මු"] },
-  { side: "left", x: 93, duration: 29, delay: -25, glyphs: ["ආ", "ය", "ු", "බ", "ෝ", "ව", "න්"] },
-  { side: "right", x: 8, duration: 32, delay: -16, glyphs: ["සි", "ං", "හ", "ල", "·", "≈", "ව"] },
-  { side: "right", x: 25, duration: 25, delay: -4, glyphs: ["ශ", "බ්", "ද", "⋮", "ය", "ක", "්"] },
-  { side: "right", x: 43, duration: 36, delay: -21, glyphs: ["ප", "ැ", "හ", "ැ", "දි", "ලි", "·"] },
-  { side: "right", x: 62, duration: 28, delay: -11, glyphs: ["අ", "ක", "ු", "රු", "≈", "ප", "ෙ"] },
-  { side: "right", x: 80, duration: 40, delay: -27, glyphs: ["හ", "ඬ", "⋮", "ස", "ට", "හ", "න"] },
-  { side: "right", x: 94, duration: 30, delay: -7, glyphs: ["ක", "ත", "ා", "ව", "·", "ට", "යි"] },
+const SINHALA_ALPHABET = [
+  "අ", "ආ", "ඇ", "ඈ", "ඉ", "ඊ", "උ", "ඌ", "ඍ", "ඎ", "ඏ", "ඐ", "එ", "ඒ", "ඓ", "ඔ", "ඕ", "ඖ",
+  "ක", "ඛ", "ග", "ඝ", "ඞ", "ඟ", "ච", "ඡ", "ජ", "ඣ", "ඤ", "ඥ", "ඦ", "ට", "ඨ", "ඩ", "ඪ", "ණ", "ඬ",
+  "ත", "ථ", "ද", "ධ", "න", "ඳ", "ප", "ඵ", "බ", "භ", "ම", "ඹ", "ය", "ර", "ල", "ව", "ශ", "ෂ", "ස", "හ", "ළ", "ෆ",
 ] as const;
+const SIGNAL_POSITIONS = [4, 15, 27, 39, 50, 61, 73, 85, 96] as const;
+const SIGNAL_COLUMNS = (["left", "right"] as const).flatMap((side, sideIndex) =>
+  SIGNAL_POSITIONS.map((x, columnIndex) => ({
+    side,
+    x,
+    duration: 23 + ((columnIndex * 5 + sideIndex * 3) % 15),
+    delay: -(4 + ((columnIndex * 7 + sideIndex * 11) % 28)),
+    glyphs: Array.from({ length: 14 }, (_, glyphIndex) =>
+      SINHALA_ALPHABET[(columnIndex + glyphIndex * SIGNAL_POSITIONS.length + sideIndex * 5) % SINHALA_ALPHABET.length],
+    ),
+  })),
+);
 
 export default function App() {
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
