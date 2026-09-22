@@ -207,7 +207,7 @@ realtimeServer.on("connection", (browser, request) => {
             format: { type: "audio/pcm", rate: 24000 },
             transcription: {
               model: "gpt-transcribe",
-              languages: [language],
+              ...(language === "en" ? { languages: ["en"] } : {}),
               prompt: language === "si"
                 ? "මෙම හඬ පටය සිංහල අක්ෂරවලින් සහ නිවැරදි විරාම ලකුණු සමඟ පිටපත් කරන්න."
                 : "Transcribe this audio in English with accurate punctuation.",
