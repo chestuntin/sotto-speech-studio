@@ -9,6 +9,8 @@ import { useRealtimeRecorder } from "./hooks/useRealtimeRecorder";
 import { download, formatTime, loadSessions, type Session } from "./lib/storage";
 
 const DEFAULT_TITLE = "නව හඬ සටහන";
+type Theme = "dark" | "light";
+type ThemePreference = Theme | "system";
 type BackgroundMode = "none" | "matrix" | "grid";
 const BACKGROUND_MODES: BackgroundMode[] = ["none", "matrix", "grid"];
 const BACKGROUND_LABELS: Record<BackgroundMode, string> = {
@@ -16,6 +18,7 @@ const BACKGROUND_LABELS: Record<BackgroundMode, string> = {
   matrix: "සිංහල අකුරු",
   grid: "සංඥා ජාලය",
 };
+const getSystemTheme = (): Theme => window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
 const isShiftKey = (code: string) => code === "ShiftLeft" || code === "ShiftRight";
 const SINHALA_ALPHABET = [
   "අ", "ආ", "ඇ", "ඈ", "ඉ", "ඊ", "උ", "ඌ", "ඍ", "ඎ", "ඏ", "ඐ", "එ", "ඒ", "ඓ", "ඔ", "ඕ", "ඖ",
@@ -37,10 +40,14 @@ const SIGNAL_COLUMNS = (["left", "right"] as const).flatMap((side, sideIndex) =>
 );
 
 export default function App() {
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    try { return localStorage.getItem("sotto-theme") === "light" ? "light" : "dark"; }
-    catch { return "dark"; }
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() => {
+    try {
+      const stored = localStorage.getItem("sotto-theme");
+      return stored === "light" || stored === "dark" ? stored : "system";
+    } catch { return "system"; }
   });
+  const [systemTheme, setSystemTheme] = useState<Theme>(getSystemTheme);
+  const theme = themePreference === "system" ? systemTheme : themePreference;
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>(() => {
     try {
       const stored = localStorage.getItem("sotto-background-mode");
@@ -197,8 +204,20 @@ export default function App() {
   }, [language]);
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("sotto-theme", theme); } catch { /* Continue without persistence. */ }
   }, [theme]);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-color-scheme: light)");
+    const syncSystemTheme = () => setSystemTheme(preference.matches ? "light" : "dark");
+    syncSystemTheme();
+    preference.addEventListener("change", syncSystemTheme);
+    return () => preference.removeEventListener("change", syncSystemTheme);
+  }, []);
+  useEffect(() => {
+    try {
+      if (themePreference === "system") localStorage.removeItem("sotto-theme");
+      else localStorage.setItem("sotto-theme", themePreference);
+    } catch { /* Continue without persistence. */ }
+  }, [themePreference]);
   useEffect(() => {
     try { localStorage.setItem("sotto-background-mode", backgroundMode); } catch { /* Continue without persistence. */ }
   }, [backgroundMode]);
@@ -303,7 +322,7 @@ export default function App() {
             <button
               className="display-button"
               type="button"
-              onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+              onClick={() => setThemePreference(theme === "dark" ? "light" : "dark")}
               aria-label={theme === "dark" ? "ආලෝක තේමාව සක්‍රිය කරන්න" : "අඳුරු තේමාව සක්‍රිය කරන්න"}
               title={theme === "dark" ? "ආලෝක තේමාව" : "අඳුරු තේමාව"}
             >
