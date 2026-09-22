@@ -52,9 +52,27 @@
   --accent-soft: light-dark(#ffe4d9, #54281d);
   --accent-ink: light-dark(#7f2a15, #ffd8cb);
   --success: #58a970;
+  --matrix-outside: #050605;
+  --matrix-glow-core: rgba(241,100,60,.56);
+  --matrix-glow-mid: rgba(176,61,33,.42);
+  --matrix-glow-outer: rgba(103,38,23,.3);
+  --matrix-glow-edge: rgba(61,24,17,.14);
+  --matrix-glyph: rgba(174,178,169,.42);
+  --matrix-accent: rgba(241,100,60,.76);
+  --matrix-accent-shadow: rgba(241,100,60,.3);
 }
 :root[data-theme="dark"] { color-scheme: dark; }
-:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --matrix-outside: #e8eee8;
+  --matrix-glow-core: rgba(112,224,139,.44);
+  --matrix-glow-mid: rgba(73,190,105,.32);
+  --matrix-glow-outer: rgba(39,132,72,.18);
+  --matrix-glow-edge: rgba(21,91,49,.08);
+  --matrix-glyph: rgba(17,115,55,.76);
+  --matrix-accent: rgba(42,198,77,.98);
+  --matrix-accent-shadow: rgba(35,157,74,.48);
+}
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; overflow: hidden; }
 body { margin: 0; min-width: 320px; background: var(--outside); }
@@ -67,20 +85,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .spin { animation: spin .85s linear infinite; }
 
 .ambient-signal { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; background: var(--outside); transition: background-color .25s ease; }
-.signal-glow { position: absolute; top: 50%; left: 50%; width: min(109.02vw,169.3vh); height: auto; aspect-ratio: 59 / 38; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse at center, rgba(241,100,60,.56) 0%, rgba(176,61,33,.42) 38%, rgba(103,38,23,.3) 64%, rgba(61,24,17,.14) 82%, transparent 94%); filter: blur(26px); opacity: 1; }
+.ambient-signal.mode-matrix { background: var(--matrix-outside); }
+.signal-glow { position: absolute; top: 50%; left: 50%; width: min(109.02vw,169.3vh); height: auto; aspect-ratio: 59 / 38; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse at center, var(--matrix-glow-core) 0%, var(--matrix-glow-mid) 38%, var(--matrix-glow-outer) 64%, var(--matrix-glow-edge) 82%, transparent 94%); filter: blur(26px); opacity: 1; }
 .signal-grid { position: absolute; inset: -12%; overflow: hidden; background-image: radial-gradient(circle, rgba(241,100,60,.82) 0 1.8px, transparent 2.4px), radial-gradient(circle, color-mix(in srgb, var(--text) 48%, transparent) 0 1.2px, transparent 1.8px); background-size: 112px 112px, 28px 28px; mask-image: linear-gradient(to right, #000 0%, #000 18%, rgba(0,0,0,.68) 27%, transparent 40%, transparent 60%, rgba(0,0,0,.68) 73%, #000 82%, #000 100%); animation: grid-drift 16s linear infinite, grid-float 7s ease-in-out infinite; will-change: transform, background-position, opacity; }
 .signal-grid::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--text) 15%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text) 15%, transparent) 1px, transparent 1px); background-size: 56px 56px; animation: grid-drift 22s linear reverse infinite; opacity: .55; }
 .signal-grid::after { content: ""; position: absolute; inset: -55% 0; background: linear-gradient(to bottom, transparent 43%, color-mix(in srgb, var(--accent) 9%, transparent) 47%, color-mix(in srgb, var(--accent) 34%, transparent) 50%, color-mix(in srgb, var(--text) 14%, transparent) 51%, color-mix(in srgb, var(--accent) 9%, transparent) 54%, transparent 58%); animation: grid-scan 8s ease-in-out infinite; will-change: transform, opacity; }
 .signal-field { position: absolute; top: 0; bottom: 0; width: clamp(190px, 23vw, 390px); overflow: hidden; mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent); }
 .signal-left { left: 0; }
 .signal-right { right: 0; }
-.signal-column { --signal-x: 50%; --signal-duration: 30s; --signal-delay: 0s; --signal-sway: 0px; --signal-sway-back: 0px; position: absolute; top: -34%; left: var(--signal-x); height: 168%; display: flex; flex-direction: column; align-items: center; justify-content: space-around; color: rgba(174,178,169,.42); animation: signal-fall var(--signal-duration) linear var(--signal-delay) infinite; will-change: transform; }
+.signal-column { --signal-x: 50%; --signal-duration: 30s; --signal-delay: 0s; --signal-sway: 0px; --signal-sway-back: 0px; position: absolute; top: -34%; left: var(--signal-x); height: 168%; display: flex; flex-direction: column; align-items: center; justify-content: space-around; color: var(--matrix-glyph); animation: signal-fall var(--signal-duration) linear var(--signal-delay) infinite; will-change: transform; }
 .signal-column i { --glyph-delay: 0s; --glyph-duration: 8s; --glyph-opacity: .45; position: relative; display: grid; place-items: center; min-width: 19px; min-height: 20px; color: inherit; font-family: "Noto Sans Sinhala","Sinhala Sangam MN","Nirmala UI",sans-serif; font-size: clamp(12px,1.15vw,18px); font-style: normal; font-weight: 400; line-height: 1; text-align: center; }
 .signal-column i span { opacity: var(--glyph-opacity); animation: glyph-body var(--glyph-duration) ease-in-out var(--glyph-delay) infinite; text-shadow: 0 0 9px currentColor; }
 .signal-column i::before, .signal-column i::after { position: absolute; inset: 0; display: grid; place-items: center; color: currentColor; pointer-events: none; }
 .signal-column i::before { content: attr(data-glyph); animation: glyph-trail var(--glyph-duration) ease-in-out var(--glyph-delay) infinite; }
 .signal-column i::after { content: attr(data-next); animation: glyph-next var(--glyph-duration) ease-in-out var(--glyph-delay) infinite; text-shadow: 0 0 11px currentColor; }
-.signal-column i.accent { color: rgba(241,100,60,.76); text-shadow: 0 0 14px rgba(241,100,60,.3); }
+.signal-column i.accent { color: var(--matrix-accent); text-shadow: 0 0 14px var(--matrix-accent-shadow); }
 .signal-column:nth-child(2n) { opacity: .68; filter: blur(.45px); }
 .signal-column:nth-child(3n) { opacity: .88; }
 .signal-column:nth-child(5n) { opacity: .52; filter: blur(1px); }
