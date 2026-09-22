@@ -20,8 +20,9 @@ const SIGNAL_COLUMNS = (["left", "right"] as const).flatMap((side, sideIndex) =>
   SIGNAL_POSITIONS.map((x, columnIndex) => ({
     side,
     x,
-    duration: 23 + ((columnIndex * 5 + sideIndex * 3) % 15),
+    duration: 17 + ((columnIndex * 7 + sideIndex * 5) % 28),
     delay: -(4 + ((columnIndex * 7 + sideIndex * 11) % 28)),
+    sway: -8 + ((columnIndex * 5 + sideIndex * 9) % 17),
     glyphs: Array.from({ length: 14 }, (_, glyphIndex) =>
       SINHALA_ALPHABET[(columnIndex + glyphIndex * SIGNAL_POSITIONS.length + sideIndex * 5) % SINHALA_ALPHABET.length],
     ),
@@ -205,9 +206,17 @@ export default function App() {
             <span
               className="signal-column"
               key={`${column.side}-${column.x}`}
-              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s` } as React.CSSProperties}
+              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s`, "--signal-sway": `${column.sway}px`, "--signal-sway-back": `${column.sway * -.45}px` } as React.CSSProperties}
             >
-              {column.glyphs.map((glyph, glyphIndex) => <i className={(glyphIndex + columnIndex) % 7 === 0 ? "accent" : ""} key={`${glyph}-${glyphIndex}`}>{glyph}</i>)}
+              {column.glyphs.map((glyph, glyphIndex) => (
+                <i
+                  className={(glyphIndex + columnIndex) % 7 === 0 ? "accent" : ""}
+                  data-glyph={glyph}
+                  data-next={SINHALA_ALPHABET[(columnIndex * 11 + glyphIndex * 7 + 13) % SINHALA_ALPHABET.length]}
+                  key={`${glyph}-${glyphIndex}`}
+                  style={{ "--glyph-delay": `${-((glyphIndex * 1.7 + columnIndex * .9) % 13)}s`, "--glyph-duration": `${5 + ((glyphIndex + columnIndex * 2) % 8)}s`, "--glyph-opacity": `${.22 + ((glyphIndex * 3 + columnIndex) % 6) * .09}` } as React.CSSProperties}
+                ><span>{glyph}</span></i>
+              ))}
             </span>
           ))}
         </div>
@@ -216,9 +225,17 @@ export default function App() {
             <span
               className="signal-column"
               key={`${column.side}-${column.x}`}
-              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s` } as React.CSSProperties}
+              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s`, "--signal-sway": `${column.sway}px`, "--signal-sway-back": `${column.sway * -.45}px` } as React.CSSProperties}
             >
-              {column.glyphs.map((glyph, glyphIndex) => <i className={(glyphIndex + columnIndex + 3) % 8 === 0 ? "accent" : ""} key={`${glyph}-${glyphIndex}`}>{glyph}</i>)}
+              {column.glyphs.map((glyph, glyphIndex) => (
+                <i
+                  className={(glyphIndex + columnIndex + 3) % 8 === 0 ? "accent" : ""}
+                  data-glyph={glyph}
+                  data-next={SINHALA_ALPHABET[(columnIndex * 13 + glyphIndex * 5 + 29) % SINHALA_ALPHABET.length]}
+                  key={`${glyph}-${glyphIndex}`}
+                  style={{ "--glyph-delay": `${-((glyphIndex * 1.3 + columnIndex * 1.1) % 15)}s`, "--glyph-duration": `${6 + ((glyphIndex * 2 + columnIndex) % 9)}s`, "--glyph-opacity": `${.2 + ((glyphIndex * 5 + columnIndex) % 7) * .08}` } as React.CSSProperties}
+                ><span>{glyph}</span></i>
+              ))}
             </span>
           ))}
         </div>
