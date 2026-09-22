@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type RealtimeRecorderStatus = "idle" | "requesting" | "recording" | "paused" | "processing";
-type Callbacks = { onComplete: (text: string, duration: number) => void; onError: (message: string) => void; onProcessing?: () => void };
+type Callbacks = {
+  onComplete: (text: string, duration: number) => void;
+  onError: (message: string) => void;
+  onProcessing?: () => void;
+  onPartial?: (text: string) => void;
+};
 
 function pcm16Base64(input: Float32Array) {
   const bytes = new Uint8Array(input.length * 2);
@@ -22,13 +27,18 @@ function websocketUrl() {
   return `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}${path}`;
 }
 
-export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError: Callbacks["onError"], onProcessing?: Callbacks["onProcessing"]) {
+export function useRealtimeRecorder(
+  onComplete: Callbacks["onComplete"],
+  onError: Callbacks["onError"],
+  onProcessing?: Callbacks["onProcessing"],
+  onPartial?: Callbacks["onPartial"],
+) {
   const [status, setStatus] = useState<RealtimeRecorderStatus>("idle");
   const [seconds, setSeconds] = useState(0);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [deviceName, setDeviceName] = useState("Default microphone");
-  const callbacks = useRef<Callbacks>({ onComplete, onError, onProcessing });
-  callbacks.current = { onComplete, onError, onProcessing };
+  const callbacks = useRef<Callbacks>({ onComplete, onError, onProcessing, onPartial });
+  callbacks.current = { onComplete, onError, onProcessing, onPartial };
   const mounted = useRef(true);
   const starting = useRef(false);
   const stream = useRef<MediaStream | null>(null);
@@ -124,8 +134,15 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
         let event: { type?: string; delta?: string; transcript?: string; error?: { message?: string } };
         try { event = JSON.parse(message.data as string); } catch { return; }
         if (event.type === "error") fail(event.error?.message || "Live transcription failed. Please try again.");
-        else if (event.type === "conversation.item.input_audio_transcription.delta") committedText.current += event.delta || "";
-        else if (event.type === "conversation.item.input_audio_transcription.completed") { committedText.current = event.transcript || committedText.current; complete(); }
+        else if (event.type === "conversation.item.input_audio_transcription.delta") {
+          committedText.current += event.delta || "";
+          callbacks.current.onPartial?.(committedText.current);
+        }
+        else if (event.type === "conversation.item.input_audio_transcription.completed") {
+          committedText.current = event.transcript || committedText.current;
+          callbacks.current.onPartial?.(committedText.current);
+          complete();
+        }
       };
       connection.onopen = () => {
         for (const audio of pendingAudio.current) connection.send(JSON.stringify({ type: "audio", audio }));
@@ -151,6 +168,7 @@ export function useRealtimeRecorder(onComplete: Callbacks["onComplete"], onError
       recorder.connect(audioContext.destination);
       elapsed.current = 0;
       committedText.current = "";
+      callbacks.current.onPartial?.("");
       stopping.current = false;
       segmentStart.current = performance.now();
       setSeconds(0);

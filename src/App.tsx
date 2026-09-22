@@ -1,28 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowDownToLine, Check, Copy, LoaderCircle, Mic, Plus, X } from "lucide-react";
+import {
+  AudioWaveform, Check, ChevronDown, CircleHelp, Copy, Download, FileText,
+  History, LoaderCircle, Mic, Mic2, Plus, Radio, ShieldCheck, Sparkles, X,
+} from "lucide-react";
 import { Waveform } from "./components/Waveform";
 import { useRealtimeRecorder } from "./hooks/useRealtimeRecorder";
 import { download, formatTime, loadSessions, type Session } from "./lib/storage";
 
-function isInteractiveTarget(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest("input, textarea, select, button, a, dialog, [contenteditable='true']"));
-}
-
-function isShiftKey(code: string) {
-  return code === "ShiftLeft" || code === "ShiftRight";
-}
+const DEFAULT_TITLE = "නව හඬ සටහන";
+const isShiftKey = (code: string) => code === "ShiftLeft" || code === "ShiftRight";
 
 export default function App() {
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
-    try {
-      return localStorage.getItem("sotto-onboarding-complete") !== "true";
-    } catch {
-      return true;
-    }
+    try { return localStorage.getItem("sotto-onboarding-complete") !== "true"; }
+    catch { return true; }
   });
-  const [onboardingStep, setOnboardingStep] = useState(0);
-  const [title, setTitle] = useState("Voice note");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [title, setTitle] = useState(DEFAULT_TITLE);
   const [text, setText] = useState("");
   const [duration, setDuration] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -31,9 +26,7 @@ export default function App() {
   const [sessions, setSessions] = useState<Session[]>(loadSessions);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [clock, setClock] = useState(() => new Date());
   const holdRequested = useRef(false);
-  const holdSource = useRef<"pointer" | "keyboard" | null>(null);
   const textArea = useRef<HTMLTextAreaElement>(null);
 
   const notify = useCallback((message: string) => setToast(message), []);
@@ -46,32 +39,29 @@ export default function App() {
   const finishTranscript = useCallback((result: string, length: number) => {
     setError("");
     setDuration(length);
-    setText("");
-    setSaved(false);
-    setSessionId(null);
     setProcessing(false);
     if (!result.trim()) {
-      setError("No speech was detected. Try speaking a little closer to your microphone.");
+      setText("");
+      setError("කථාවක් හඳුනාගත නොහැකි විය. මයික්‍රොෆෝනයට සමීපව නැවත උත්සාහ කරන්න.");
       return;
     }
-    const noteTitle = title === "Voice note" ? `Voice note ${sessions.length + 1}` : title;
+    const noteTitle = title === DEFAULT_TITLE ? `හඬ සටහන ${sessions.length + 1}` : title;
     setTitle(noteTitle);
-    saveSession({ id: crypto.randomUUID(), title: noteTitle, text: result, duration: length, created: Date.now(), model: "gpt-transcribe" });
     setText(result);
-    notify("Transcript ready");
+    saveSession({ id: crypto.randomUUID(), title: noteTitle, text: result, duration: length, created: Date.now(), model: "gpt-transcribe" });
+    notify("පිටපත සූදානම්");
   }, [notify, saveSession, sessions.length, title]);
 
-  const recorder = useRealtimeRecorder(finishTranscript, (message) => {
-    setProcessing(false);
-    setError(message);
-  }, () => {
-    setProcessing(true);
-  });
-
+  const recorder = useRealtimeRecorder(
+    finishTranscript,
+    (message) => { setProcessing(false); setError(message); },
+    () => setProcessing(true),
+    (partial) => setText(partial),
+  );
   const recording = recorder.status === "recording" || recorder.status === "paused";
   const requesting = recorder.status === "requesting";
-  const holding = recording || requesting;
   const busy = recording || requesting || processing;
+  const visibleTime = recording ? recorder.seconds : duration;
 
   const persistCurrentNote = useCallback(() => {
     if (!saved || !sessionId) return;
@@ -81,45 +71,30 @@ export default function App() {
   const newNote = useCallback(() => {
     if (busy) return;
     persistCurrentNote();
-    setTitle("Voice note");
+    setTitle(DEFAULT_TITLE);
     setText("");
     setDuration(0);
     setSessionId(null);
     setSaved(false);
     setError("");
+    setHistoryOpen(false);
     requestAnimationFrame(() => textArea.current?.focus());
   }, [busy, persistCurrentNote]);
 
-  async function beginHold(source: "pointer" | "keyboard") {
-    if (busy || (onboardingOpen && onboardingStep === 1)) return;
-    if (onboardingOpen && onboardingStep === 0) {
-      void requestMicrophoneForTour();
-      return;
-    }
-    holdRequested.current = true;
-    holdSource.current = source;
-    if (onboardingOpen) setOnboardingStep(1);
+  const startRecording = useCallback(async () => {
+    if (busy || onboardingOpen) return;
     newNote();
+    setText("");
     await recorder.start();
-    if (!holdRequested.current) recorder.stop();
-  }
+  }, [busy, newNote, onboardingOpen, recorder]);
 
-  function endHold(source: "pointer" | "keyboard") {
-    if (holdSource.current !== source) return;
-    holdRequested.current = false;
-    holdSource.current = null;
-    if (recording) {
-      recorder.stop();
-    }
-  }
+  const toggleRecording = useCallback(() => {
+    if (processing) { recorder.cancel(); setProcessing(false); return; }
+    if (recording) recorder.stop();
+    else void startRecording();
+  }, [processing, recorder, recording, startRecording]);
 
-  function cancelTranscription() {
-    recorder.cancel();
-    setProcessing(false);
-    setError("Live transcription cancelled.");
-  }
-
-  function openSession(session: Session) {
+  const openSession = useCallback((session: Session) => {
     if (busy) return;
     persistCurrentNote();
     setTitle(session.title);
@@ -128,242 +103,161 @@ export default function App() {
     setSessionId(session.id);
     setSaved(true);
     setError("");
-  }
+    setHistoryOpen(false);
+  }, [busy, persistCurrentNote]);
 
   async function copyTranscript() {
     if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      notify("Copied to clipboard");
-    } catch {
-      textArea.current?.focus();
-      textArea.current?.select();
-      notify("Select the transcript and copy it manually");
-    }
+    try { await navigator.clipboard.writeText(text); notify("පිටපත් කරන ලදී"); }
+    catch { textArea.current?.focus(); textArea.current?.select(); notify("පෙළ තෝරා අතින් පිටපත් කරන්න"); }
   }
 
   function exportTranscript() {
     if (!text) return;
-    const filename = `${title.replace(/[^\p{L}\p{N}\s_-]/gu, "").trim().slice(0, 80) || "voice-note"}.txt`;
+    const filename = `${title.replace(/[^\p{L}\p{N}\s_-]/gu, "").trim().slice(0, 80) || "sinhala-transcript"}.txt`;
     download(new Blob([text], { type: "text/plain;charset=utf-8" }), filename);
-    notify("Transcript exported");
+    notify("පිටපත බාගත කරන ලදී");
   }
 
-  function finishOnboarding() {
+  async function finishOnboarding() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      localStorage.setItem("sotto-onboarding-complete", "true");
+      setOnboardingOpen(false);
+      notify("මයික්‍රොෆෝනය සූදානම්");
+    } catch { setError("මයික්‍රොෆෝන අවසරය ලබා දී නැත. බ්‍රවුසරයේ Allow තෝරා නැවත උත්සාහ කරන්න."); }
+  }
+
+  function skipOnboarding() {
     try { localStorage.setItem("sotto-onboarding-complete", "true"); } catch { /* Continue without persistence. */ }
     setOnboardingOpen(false);
-  }
-
-  async function requestMicrophoneForTour() {
-    setOnboardingStep(1);
-    try {
-      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      permissionStream.getTracks().forEach((track) => track.stop());
-      setOnboardingStep(2);
-    } catch {
-      setError("Choose Allow in Chrome to give Sotto microphone access.");
-    }
   }
 
   useEffect(() => {
     try { localStorage.setItem("sotto-sessions", JSON.stringify(sessions)); }
     catch { setSaved(false); }
   }, [sessions]);
-
   useEffect(() => {
     if (!saved || !sessionId || processing) return;
     const timer = window.setTimeout(persistCurrentNote, 400);
     return () => window.clearTimeout(timer);
   }, [processing, saved, sessionId, text, title, persistCurrentNote]);
-
-  useEffect(() => {
-    if (onboardingOpen && onboardingStep === 1 && recorder.status === "recording") {
-      setOnboardingStep(2);
-    }
-  }, [onboardingOpen, onboardingStep, recorder.status]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setClock(new Date()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 3200);
+    const timer = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
-
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
-      if (event.code !== "Space" && !isShiftKey(event.code)) return;
-      if (event.repeat || (event.code === "Space" && isInteractiveTarget(event.target))) return;
+      if (!isShiftKey(event.code) || event.repeat || busy || onboardingOpen) return;
       event.preventDefault();
-      void beginHold("keyboard");
+      holdRequested.current = true;
+      void startRecording();
     };
     const keyUp = (event: KeyboardEvent) => {
-      if ((event.code !== "Space" && !isShiftKey(event.code)) || holdSource.current !== "keyboard") return;
+      if (!isShiftKey(event.code) || !holdRequested.current) return;
       event.preventDefault();
-      endHold("keyboard");
+      holdRequested.current = false;
+      if (recorder.status === "recording") recorder.stop();
     };
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
-    return () => {
-      window.removeEventListener("keydown", keyDown);
-      window.removeEventListener("keyup", keyUp);
-    };
-  });
+    return () => { window.removeEventListener("keydown", keyDown); window.removeEventListener("keyup", keyUp); };
+  }, [busy, onboardingOpen, recorder, startRecording]);
 
-
-  const noteNumber = sessionId ? Math.max(1, sessions.findIndex((session) => session.id === sessionId) + 1) : sessions.length + 1;
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  const visibleTime = recording ? recorder.seconds : duration;
-  const status = holding ? "HOLDING — LISTENING" : processing ? "TURNING VOICE INTO TEXT" : text ? "DRAFT READY" : "READY";
-  const recent = sessions.slice(0, 3);
-  const touchDevice = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-  const onboardingCopy = onboardingStep === 0
-    ? touchDevice ? "Hold the microphone button to speak" : "Hold Right Shift to speak"
-    : onboardingStep === 1
-      ? touchDevice ? "Tap Allow this time to enable recording" : "Click Allow this time to enable recording"
-      : touchDevice ? "Hold the microphone button to transcribe your speech to text" : "Press Right Shift to transcribe your speech to text";
+  const words = useMemo(() => text.trim() ? text.trim().split(/\s+/).length : 0, [text]);
+  const statusLabel = recording ? "පටිගත වෙමින්" : requesting ? "අවසරය ඉල්ලමින්" : processing ? "පිටපත් කරමින්" : "සූදානම්";
+  const prompt = recording ? "මම අසා සිටිමි…" : processing ? "වචන සකසමින්…" : "කතා කිරීම අරඹන්න";
+  const helper = recording ? "නවත්වන්න මයික්‍රොෆෝනය තට්ටු කරන්න" : "මයික්‍රොෆෝනය තට්ටු කරන්න හෝ Right Shift අල්ලාගෙන සිටින්න";
 
   return (
-    <div className={`sotto-app ${holding ? "is-listening" : ""}`}>
-      <aside className="note-rail" aria-label="Recent notes">
-        <button className="rail-brand" onClick={newNote} aria-label="New Sotto note">sotto</button>
-        <nav className="rail-notes">
-          {Array.from({ length: 3 }, (_, index) => {
-            const session = recent[index];
-            return (
-              <button key={session?.id || index} className={session?.id === sessionId ? "active" : ""} disabled={!session || busy} onClick={() => session && openSession(session)} aria-label={session ? `Open ${session.title}` : `Empty note slot ${index + 1}`}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-              </button>
-            );
-          })}
+    <div className={`hela-app ${recording ? "is-recording" : ""}`}>
+      <aside className="app-sidebar" aria-label="ප්‍රධාන මෙනුව">
+        <button className="brand" onClick={newNote} aria-label="නව හඬ සටහනක්">
+          <span className="brand-mark"><AudioWaveform aria-hidden="true" /></span>
+          <span className="brand-copy"><strong>හඬ</strong><small>Voice to text</small></span>
+        </button>
+        <nav className="primary-nav">
+          <button className={!historyOpen ? "active" : ""} onClick={() => setHistoryOpen(false)}><Mic2 aria-hidden="true" /><span>හඬ ලියන්න</span></button>
+          <button className={historyOpen ? "active" : ""} onClick={() => setHistoryOpen((open) => !open)}><History aria-hidden="true" /><span>මෑත පිටපත්</span><em>{sessions.length}</em></button>
+          <button onClick={newNote} disabled={busy}><Plus aria-hidden="true" /><span>නව සටහන</span></button>
         </nav>
+        <div className="sidebar-bottom">
+          <button onClick={() => setOnboardingOpen(true)}><CircleHelp aria-hidden="true" /><span>උදව්</span></button>
+          <div className="account"><span className="avatar">ස</span><span><strong>සිංහල කථිකයා</strong><small>මෙම උපාංගයේ සුරකියි</small></span></div>
+        </div>
       </aside>
 
-      <main className="note-surface">
-        <section className="editor-pane" aria-label="Transcript editor">
-          <header className="editor-header">
-            <div className="editor-meta">
-              <span>VOICE NOTE {String(noteNumber).padStart(2, "0")}</span>
-              <time>{clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
-            </div>
-            <div className="editor-actions">
-              <button onClick={newNote} disabled={busy}><Plus size={14} />NEW</button>
-              <button onClick={() => void copyTranscript()} disabled={!text || processing}><Copy size={14} />COPY</button>
-              <button onClick={exportTranscript} disabled={!text || processing}><ArrowDownToLine size={14} />EXPORT</button>
-            </div>
-          </header>
+      <main className="app-main">
+        <header className="topbar">
+          <div className="topbar-title"><h1>ඔබ කියන දේ සිංහලෙන් ලියමු</h1><p>Speak naturally — හඬ ඔබේ වචන හඳුනාගනී</p></div>
+          <div className="topbar-actions"><span className="language-pill">සිංහල · ශ්‍රී ලංකා <ChevronDown aria-hidden="true" /></span><button className="new-note-button" onClick={newNote} disabled={busy}><Plus aria-hidden="true" />නව සටහන</button></div>
+        </header>
 
-          <div className="mobile-brandbar">
-            <button onClick={newNote}>sotto</button>
-            <div>
-              <time>{clock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
+        <div className="workspace">
+          <section className="recorder-card" aria-label="හඬ පටිගත කිරීම">
+            <div className="panel-heading"><span>සජීවී පටිගත කිරීම</span><span className={`status-chip ${recording || processing ? "active" : ""}`}><i />{statusLabel}</span></div>
+            <div className="recording-stage">
+              <div className="mic-orbit">
+                <button className={`mic-button ${processing ? "processing" : ""}`} type="button" onClick={toggleRecording} aria-pressed={recording} aria-label={recording ? "පටිගත කිරීම නවත්වන්න" : processing ? "පිටපත් කිරීම අවලංගු කරන්න" : "පටිගත කිරීම අරඹන්න"} disabled={requesting}>
+                  {processing ? <LoaderCircle className="spin" aria-hidden="true" /> : recording ? <span className="stop-mark" /> : <Mic aria-hidden="true" />}
+                </button>
+              </div>
+              <strong>{prompt}</strong><span>{helper}</span>
             </div>
-          </div>
-
-          <div className="editor-body">
-            <input className="note-title" aria-label="Note title" value={title} maxLength={80} onChange={(event) => setTitle(event.target.value)} disabled={processing} />
-            <textarea ref={textArea} aria-label="Transcript" value={text} onChange={(event) => setText(event.target.value)} readOnly={processing} placeholder="Your words will appear here." spellCheck />
-            <div className="editor-foot">
-              <span>{words} {words === 1 ? "word" : "words"}</span>
-              <span>{saved ? "Saved on this device" : text ? "Editing" : "Ready for a thought"}</span>
+            <div className="recorder-footer">
+              <div className="waveform-wrap"><Waveform analyser={recorder.analyser} active={recording} processing={processing} /></div>
+              <div className="device-row"><span><Radio aria-hidden="true" />Input</span><strong>{recorder.deviceName}</strong></div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="recorder-dock" aria-label="Push-to-talk recorder">
-          <div className="dock-waveform"><Waveform analyser={recorder.analyser} active={recorder.status === "recording"} processing={processing} /></div>
-          <div className="dock-status" aria-live="polite"><span>{status}</span><strong>{formatTime(visibleTime)}</strong></div>
-          <div className="dock-action">
-            {processing ? (
-              <button className="push-button processing" onClick={cancelTranscription}><LoaderCircle className="spin" size={34} /><span>CANCEL</span></button>
-            ) : (
-              <button
-                className="push-button"
-                aria-label={holding ? "Release to transcribe" : "Hold to record"}
-                disabled={requesting}
-                onPointerDown={(event) => {
-                  if (event.pointerType === "mouse" && event.button !== 0) return;
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  void beginHold("pointer");
-                }}
-                onPointerUp={() => endHold("pointer")}
-                onPointerCancel={() => endHold("pointer")}
-                onKeyDown={(event) => {
-                    if ((event.code === "Space" || event.code === "Enter" || isShiftKey(event.code)) && !event.repeat) {
-                    event.preventDefault();
-                    void beginHold("keyboard");
-                  }
-                }}
-                onKeyUp={(event) => {
-                  if (event.code === "Space" || event.code === "Enter" || isShiftKey(event.code)) {
-                    event.preventDefault();
-                    endHold("keyboard");
-                  }
-                }}
-                onContextMenu={(event) => event.preventDefault()}
-              >
-                <Mic size={42} strokeWidth={2.1} />
-              </button>
-            )}
-            <span>{processing ? "CANCEL TRANSCRIPTION" : holding ? "RELEASE TO WRITE" : "HOLD TO SPEAK"}</span>
-          </div>
-        </section>
+          <section className="transcript-card" aria-label="සිංහල පිටපත">
+            <div className="transcript-heading">
+              <div><input aria-label="සටහන් මාතෘකාව" value={title} maxLength={80} onChange={(event) => setTitle(event.target.value)} disabled={processing} /><p>වචන {words} · මිනිත්තු {formatTime(visibleTime)}</p></div>
+              <button className="copy-button" onClick={() => void copyTranscript()} disabled={!text || processing}><Copy aria-hidden="true" />පිටපත් කරන්න</button>
+            </div>
+            <div className="editor-shell">
+              <textarea ref={textArea} aria-label="පිටපත් පෙළ" value={text} onChange={(event) => setText(event.target.value)} readOnly={processing || recording} placeholder={recording ? "ඔබේ වචන මෙහි දිස්වනු ඇත…" : "පටිගත කිරීමක් ආරම්භ කරන්න, නැතහොත් මෙහි ටයිප් කරන්න…"} spellCheck />
+              {(recording || processing) && <span className="live-caret" aria-hidden="true" />}
+            </div>
+            <div className="transcript-footer">
+              <div className="trust-notes"><span><Sparkles aria-hidden="true" />විරාම ලකුණු ස්වයංක්‍රීයයි</span><span><ShieldCheck aria-hidden="true" />මෙම උපාංගයේ සුරකියි</span></div>
+              <button className="export-button" onClick={exportTranscript} disabled={!text || processing}><Download aria-hidden="true" />අපනයනය</button>
+            </div>
+          </section>
+        </div>
+
+        <AnimatePresence>
+          {historyOpen && (
+            <motion.aside className="history-drawer" aria-label="මෑත පිටපත්" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+              <div className="drawer-heading"><div><span>ඔබේ සටහන්</span><h2>මෑත පිටපත්</h2></div><button onClick={() => setHistoryOpen(false)} aria-label="වසන්න"><X /></button></div>
+              <div className="history-list">
+                {sessions.length ? sessions.map((session) => (
+                  <button key={session.id} onClick={() => openSession(session)} className={session.id === sessionId ? "selected" : ""}>
+                    <FileText aria-hidden="true" /><span><strong>{session.title}</strong><small>{new Intl.DateTimeFormat("si-LK", { dateStyle: "medium" }).format(session.created)} · {formatTime(session.duration)}</small></span>
+                  </button>
+                )) : <div className="empty-history"><History /><strong>තවම පිටපත් නැත</strong><span>ඔබේ පළමු හඬ සටහන මෙහි දිස්වනු ඇත.</span></div>}
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </main>
 
       <AnimatePresence>
         {onboardingOpen && (
-          <motion.div
-            className={`onboarding-overlay ${onboardingStep === 1 ? "permission-step" : ""}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="coachmark-title"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="coachmark"
-              initial={{ opacity: 0, y: 12, scale: .98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: .99 }}
-              transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            >
-              <div className="coachmark-topline">
-                <span>{onboardingStep + 1} OF 3</span>
-                <button onClick={finishOnboarding}>SKIP</button>
-              </div>
-              <div className="coachmark-body" key={onboardingStep}>
-                {onboardingStep === 0 && (touchDevice ? <div className="permission-mark"><Mic size={28} /></div> : <div className="keycap"><small>RIGHT</small><strong>SHIFT</strong><i>⇧</i></div>)}
-                {onboardingStep === 1 && <div className="permission-mark"><Mic size={28} /><Check size={16} /></div>}
-                {onboardingStep === 2 && <div className="voice-mark"><i /><i /><i /><i /><i /></div>}
-                <div>
-                  <h2 id="coachmark-title">{onboardingCopy}</h2>
-                </div>
-              </div>
-              <div className="coachmark-actions">
-                <button className="coachmark-back" onClick={() => setOnboardingStep((step) => Math.max(0, step - 1))} disabled={onboardingStep === 0}>BACK</button>
-                <div className="coachmark-dots" aria-hidden="true"><i className={onboardingStep === 0 ? "active" : ""} /><i className={onboardingStep === 1 ? "active" : ""} /><i className={onboardingStep === 2 ? "active" : ""} /></div>
-                <button
-                  className="coachmark-next"
-                  onClick={() => {
-                    if (onboardingStep === 0) void requestMicrophoneForTour();
-                    else if (onboardingStep === 2) finishOnboarding();
-                    else setOnboardingStep((step) => step + 1);
-                  }}
-                  autoFocus
-                >{onboardingStep === 2 ? "DONE" : "NEXT"}</button>
-              </div>
-              <span className="coachmark-arrow" aria-hidden="true" />
+          <motion.div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="welcome-card" initial={{ y: 18, scale: .98 }} animate={{ y: 0, scale: 1 }} exit={{ y: 10, opacity: 0 }}>
+              <span className="welcome-mark"><Mic /></span><p>සිංහල හඬ-ට-පෙළ</p><h2 id="welcome-title">ඔබේ හඬ, පැහැදිලි වචන ලෙස.</h2>
+              <span>මයික්‍රොෆෝනය තට්ටු කර කතා කරන්න. ඔබ අවසන් කළ විට හඬ ඔබේ සිංහල පිටපත සූදානම් කරයි.</span>
+              <div className="welcome-actions"><button onClick={() => void finishOnboarding()}>මයික්‍රොෆෝනය සූදානම් කරන්න</button><button className="skip-button" onClick={skipOnboarding}>දැනට මඟහරින්න</button></div>
+              <small>හඬ ගොනු මෙම යෙදුම තුළ ගබඩා නොකෙරේ.</small>
             </motion.div>
           </motion.div>
         )}
-        {error && <motion.div className="error-toast" role="alert" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><span>{error}</span><button onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></motion.div>}
-        {toast && <motion.div className="success-toast" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><Check size={15} />{toast}</motion.div>}
+        {error && <motion.div className="toast error" role="alert" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><span>{error}</span><button onClick={() => setError("")} aria-label="දෝෂය වසන්න"><X /></button></motion.div>}
+        {toast && <motion.div className="toast success" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><Check />{toast}</motion.div>}
       </AnimatePresence>
-
     </div>
   );
 }
