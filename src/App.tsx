@@ -10,6 +10,20 @@ import { download, formatTime, loadSessions, type Session } from "./lib/storage"
 
 const DEFAULT_TITLE = "නව හඬ සටහන";
 const isShiftKey = (code: string) => code === "ShiftLeft" || code === "ShiftRight";
+const SIGNAL_COLUMNS = [
+  { side: "left", x: 7, duration: 27, delay: -18, glyphs: ["අ", "ං", "ක", "·", "හ", "ර", "≈", "ත", "ා"] },
+  { side: "left", x: 22, duration: 34, delay: -6, glyphs: ["ව", "ි", "න", "·", "ද", "ු", "⋮", "ම"] },
+  { side: "left", x: 39, duration: 24, delay: -13, glyphs: ["ස", "්", "ප", "≈", "ෙ", "ළ", "·", "ට"] },
+  { side: "left", x: 58, duration: 31, delay: -22, glyphs: ["ක", "ථ", "ා", "⋮", "ව", "ච", "න"] },
+  { side: "left", x: 78, duration: 38, delay: -9, glyphs: ["හ", "ඬ", "·", "ල", "ි", "ය", "≈", "මු"] },
+  { side: "left", x: 93, duration: 29, delay: -25, glyphs: ["ආ", "ය", "ු", "බ", "ෝ", "ව", "න්"] },
+  { side: "right", x: 8, duration: 32, delay: -16, glyphs: ["සි", "ං", "හ", "ල", "·", "≈", "ව"] },
+  { side: "right", x: 25, duration: 25, delay: -4, glyphs: ["ශ", "බ්", "ද", "⋮", "ය", "ක", "්"] },
+  { side: "right", x: 43, duration: 36, delay: -21, glyphs: ["ප", "ැ", "හ", "ැ", "දි", "ලි", "·"] },
+  { side: "right", x: 62, duration: 28, delay: -11, glyphs: ["අ", "ක", "ු", "රු", "≈", "ප", "ෙ"] },
+  { side: "right", x: 80, duration: 40, delay: -27, glyphs: ["හ", "ඬ", "⋮", "ස", "ට", "හ", "න"] },
+  { side: "right", x: 94, duration: 30, delay: -7, glyphs: ["ක", "ත", "ා", "ව", "·", "ට", "යි"] },
+] as const;
 
 export default function App() {
   const [onboardingOpen, setOnboardingOpen] = useState(() => {
@@ -180,7 +194,33 @@ export default function App() {
   const helper = recording ? "නවත්වන්න මයික්‍රොෆෝනය තට්ටු කරන්න" : "මයික්‍රොෆෝනය තට්ටු කරන්න හෝ Right Shift අල්ලාගෙන සිටින්න";
 
   return (
-    <div className={`hela-app ${recording ? "is-recording" : ""}`}>
+    <>
+      <div className="ambient-signal" aria-hidden="true">
+        <div className="signal-glow" />
+        <div className="signal-field signal-left">
+          {SIGNAL_COLUMNS.filter((column) => column.side === "left").map((column, columnIndex) => (
+            <span
+              className="signal-column"
+              key={`${column.side}-${column.x}`}
+              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s` } as React.CSSProperties}
+            >
+              {column.glyphs.map((glyph, glyphIndex) => <i className={(glyphIndex + columnIndex) % 7 === 0 ? "accent" : ""} key={`${glyph}-${glyphIndex}`}>{glyph}</i>)}
+            </span>
+          ))}
+        </div>
+        <div className="signal-field signal-right">
+          {SIGNAL_COLUMNS.filter((column) => column.side === "right").map((column, columnIndex) => (
+            <span
+              className="signal-column"
+              key={`${column.side}-${column.x}`}
+              style={{ "--signal-x": `${column.x}%`, "--signal-duration": `${column.duration}s`, "--signal-delay": `${column.delay}s` } as React.CSSProperties}
+            >
+              {column.glyphs.map((glyph, glyphIndex) => <i className={(glyphIndex + columnIndex + 3) % 8 === 0 ? "accent" : ""} key={`${glyph}-${glyphIndex}`}>{glyph}</i>)}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className={`hela-app ${recording ? "is-recording" : ""}`}>
       <aside className="app-sidebar" aria-label="ප්‍රධාන මෙනුව">
         <button className="brand" onClick={newNote} aria-label="නව හඬ සටහනක්">
           <span className="brand-mark"><AudioWaveform aria-hidden="true" /></span>
@@ -284,6 +324,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 }
