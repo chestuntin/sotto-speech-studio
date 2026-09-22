@@ -20,11 +20,15 @@ function pcm16Base64(input: Float32Array) {
   return btoa(binary);
 }
 
-function websocketUrl() {
+function websocketUrl(language: "si" | "en") {
   const configured = import.meta.env.VITE_REALTIME_WS_URL as string | undefined;
-  if (configured) return configured;
+  if (configured) {
+    const url = new URL(configured, window.location.href);
+    url.searchParams.set("language", language);
+    return url.toString();
+  }
   const path = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "/realtime" : "/api/server";
-  return `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}${path}`;
+  return `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}${path}?language=${language}`;
 }
 
 export function useRealtimeRecorder(
@@ -32,6 +36,7 @@ export function useRealtimeRecorder(
   onError: Callbacks["onError"],
   onProcessing?: Callbacks["onProcessing"],
   onPartial?: Callbacks["onPartial"],
+  language: "si" | "en" = "si",
 ) {
   const [status, setStatus] = useState<RealtimeRecorderStatus>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -128,7 +133,7 @@ export function useRealtimeRecorder(
       audioAnalyser.smoothingTimeConstant = 0.7;
       source.connect(audioAnalyser);
       setAnalyser(audioAnalyser);
-      const connection = new WebSocket(websocketUrl());
+      const connection = new WebSocket(websocketUrl(language));
       socket.current = connection;
       connection.onmessage = (message) => {
         let event: { type?: string; delta?: string; transcript?: string; error?: { message?: string } };
@@ -176,7 +181,7 @@ export function useRealtimeRecorder(
     } catch (error) {
       fail(error instanceof DOMException ? "Could not access your microphone. Check the browser permission and try again." : "Could not connect to realtime transcription. Start the local server and try again.");
     } finally { starting.current = false; }
-  }, [complete, fail]);
+  }, [complete, fail, language]);
 
   const cancel = useCallback(() => { cleanup(); stopping.current = false; setStatus("idle"); }, [cleanup]);
   const togglePause = useCallback(() => {}, []);

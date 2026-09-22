@@ -17,6 +17,10 @@ export default function App() {
     catch { return true; }
   });
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [language, setLanguage] = useState<"si" | "en">(() => {
+    try { return localStorage.getItem("sotto-transcription-language") === "en" ? "en" : "si"; }
+    catch { return "si"; }
+  });
   const [title, setTitle] = useState(DEFAULT_TITLE);
   const [text, setText] = useState("");
   const [duration, setDuration] = useState(0);
@@ -57,6 +61,7 @@ export default function App() {
     (message) => { setProcessing(false); setError(message); },
     () => setProcessing(true),
     (partial) => setText(partial),
+    language,
   );
   const recording = recorder.status === "recording" || recorder.status === "paused";
   const requesting = recorder.status === "requesting";
@@ -149,6 +154,9 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
+    try { localStorage.setItem("sotto-transcription-language", language); } catch { /* Continue without persistence. */ }
+  }, [language]);
+  useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
       if (!isShiftKey(event.code) || event.repeat || busy || onboardingOpen) return;
       event.preventDefault();
@@ -185,14 +193,23 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <button onClick={() => setOnboardingOpen(true)}><CircleHelp aria-hidden="true" /><span>උදව්</span></button>
-          <div className="account"><span className="avatar">ස</span><span><strong>සිංහල කථිකයා</strong><small>මෙම උපාංගයේ සුරකියි</small></span></div>
+          <div className="account"><span className="avatar">ස</span><span><strong>සිංහල කථිකයා</strong><small>Free plan · 5 min</small></span></div>
         </div>
       </aside>
 
       <main className="app-main">
         <header className="topbar">
           <div className="topbar-title"><h1>ඔබ කියන දේ සිංහලෙන් ලියමු</h1><p>Speak naturally — හඬ ඔබේ වචන හඳුනාගනී</p></div>
-          <div className="topbar-actions"><span className="language-pill">සිංහල · ශ්‍රී ලංකා <ChevronDown aria-hidden="true" /></span><button className="new-note-button" onClick={newNote} disabled={busy}><Plus aria-hidden="true" />නව සටහන</button></div>
+          <div className="topbar-actions">
+            <label className="language-pill">
+              <select aria-label="Transcription language" value={language} onChange={(event) => setLanguage(event.target.value as "si" | "en")} disabled={busy}>
+                <option value="si">සිංහල · ශ්‍රී ලංකා</option>
+                <option value="en">English</option>
+              </select>
+              <ChevronDown aria-hidden="true" />
+            </label>
+            <button className="new-note-button" onClick={newNote} disabled={busy}><Plus aria-hidden="true" />නව සටහන</button>
+          </div>
         </header>
 
         <div className="workspace">
@@ -222,7 +239,7 @@ export default function App() {
               {(recording || processing) && <span className="live-caret" aria-hidden="true" />}
             </div>
             <div className="transcript-footer">
-              <div className="trust-notes"><span><Sparkles aria-hidden="true" />විරාම ලකුණු ස්වයංක්‍රීයයි</span><span><ShieldCheck aria-hidden="true" />මෙම උපාංගයේ සුරකියි</span></div>
+              <div className="trust-notes"><span><Sparkles aria-hidden="true" />විරාම ලකුණු ස්වයංක්‍රීයයි</span><span><ShieldCheck aria-hidden="true" />පෞද්ගලිකයි</span></div>
               <button className="export-button" onClick={exportTranscript} disabled={!text || processing}><Download aria-hidden="true" />අපනයනය</button>
             </div>
           </section>

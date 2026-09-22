@@ -186,11 +186,13 @@ server.on("upgrade", (request, socket, head) => {
   if (url.pathname !== "/realtime") return;
   realtimeServer.handleUpgrade(request, socket, head, (client) => realtimeServer.emit("connection", client, request));
 });
-realtimeServer.on("connection", (browser) => {
+realtimeServer.on("connection", (browser, request) => {
   if (!process.env.OPENAI_API_KEY) {
     browser.close(1011, "Server transcription key is not configured");
     return;
   }
+  const requestUrl = new URL(request.url || "/realtime", "http://localhost");
+  const language = requestUrl.searchParams.get("language") === "en" ? "en" : "si";
   const openai = new WebSocket("wss://api.openai.com/v1/realtime?intent=transcription", {
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
   });
@@ -203,7 +205,13 @@ realtimeServer.on("connection", (browser) => {
         audio: {
           input: {
             format: { type: "audio/pcm", rate: 24000 },
-            transcription: { model: "gpt-transcribe" },
+            transcription: {
+              model: "gpt-transcribe",
+              languages: [language],
+              prompt: language === "si"
+                ? "මෙම හඬ පටය සිංහල අක්ෂරවලින් සහ නිවැරදි විරාම ලකුණු සමඟ පිටපත් කරන්න."
+                : "Transcribe this audio in English with accurate punctuation.",
+            },
             turn_detection: null,
           },
         },
