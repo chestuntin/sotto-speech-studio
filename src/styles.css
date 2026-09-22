@@ -24,11 +24,16 @@
 }
 @keyframes grid-drift {
   from { background-position: 0 0, 0 0; }
-  to { background-position: 128px 64px, 32px 32px; }
+  to { background-position: 112px 56px, 28px 28px; }
 }
 @keyframes grid-float {
-  0%, 100% { transform: perspective(900px) rotateX(58deg) scale(1.18) translate3d(0,7%,0); opacity: .45; }
-  50% { transform: perspective(900px) rotateX(55deg) scale(1.21) translate3d(0,4%,0); opacity: .66; }
+  0%, 100% { transform: translate3d(-5px,0,0) scale(1.01); opacity: .68; }
+  50% { transform: translate3d(5px,-4px,0) scale(1.025); opacity: .94; }
+}
+@keyframes grid-scan {
+  0% { transform: translate3d(0,-58%,0); opacity: 0; }
+  16%, 84% { opacity: .72; }
+  100% { transform: translate3d(0,58%,0); opacity: 0; }
 }
 
 :root {
@@ -63,8 +68,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 
 .ambient-signal { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; background: var(--outside); transition: background-color .25s ease; }
 .signal-glow { position: absolute; top: 50%; left: 50%; width: min(109.02vw,169.3vh); height: auto; aspect-ratio: 59 / 38; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse at center, rgba(241,100,60,.56) 0%, rgba(176,61,33,.42) 38%, rgba(103,38,23,.3) 64%, rgba(61,24,17,.14) 82%, transparent 94%); filter: blur(26px); opacity: 1; }
-.signal-grid { position: absolute; inset: -28%; background-image: radial-gradient(circle, rgba(241,100,60,.52) 0 1.4px, transparent 1.8px), radial-gradient(circle, color-mix(in srgb, var(--text) 30%, transparent) 0 1px, transparent 1.5px); background-size: 128px 128px, 32px 32px; mask-image: radial-gradient(ellipse 68% 88% at center, transparent 0 38%, rgba(0,0,0,.2) 54%, #000 78%, transparent 100%); animation: grid-drift 28s linear infinite, grid-float 12s ease-in-out infinite; transform-origin: center 70%; will-change: transform, background-position, opacity; }
-.signal-grid::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 22%, color-mix(in srgb, var(--accent) 10%, transparent) 47%, transparent 70%); background-size: 220% 100%; animation: grid-drift 36s linear reverse infinite; opacity: .45; }
+.signal-grid { position: absolute; inset: -12%; overflow: hidden; background-image: radial-gradient(circle, rgba(241,100,60,.82) 0 1.8px, transparent 2.4px), radial-gradient(circle, color-mix(in srgb, var(--text) 48%, transparent) 0 1.2px, transparent 1.8px); background-size: 112px 112px, 28px 28px; mask-image: linear-gradient(to right, #000 0%, #000 18%, rgba(0,0,0,.68) 27%, transparent 40%, transparent 60%, rgba(0,0,0,.68) 73%, #000 82%, #000 100%); animation: grid-drift 16s linear infinite, grid-float 7s ease-in-out infinite; will-change: transform, background-position, opacity; }
+.signal-grid::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--text) 15%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text) 15%, transparent) 1px, transparent 1px); background-size: 56px 56px; animation: grid-drift 22s linear reverse infinite; opacity: .55; }
+.signal-grid::after { content: ""; position: absolute; inset: -55% 0; background: linear-gradient(to bottom, transparent 43%, color-mix(in srgb, var(--accent) 9%, transparent) 47%, color-mix(in srgb, var(--accent) 34%, transparent) 50%, color-mix(in srgb, var(--text) 14%, transparent) 51%, color-mix(in srgb, var(--accent) 9%, transparent) 54%, transparent 58%); animation: grid-scan 8s ease-in-out infinite; will-change: transform, opacity; }
 .signal-field { position: absolute; top: 0; bottom: 0; width: clamp(190px, 23vw, 390px); overflow: hidden; mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent); }
 .signal-left { left: 0; }
 .signal-right { right: 0; }
