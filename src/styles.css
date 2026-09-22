@@ -52,7 +52,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .spin { animation: spin .85s linear infinite; }
 
 .ambient-signal { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; background: #050605; }
-.signal-glow { position: absolute; top: 50%; left: 50%; width: min(1425px, 135vmin); aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(circle at center, rgba(241,100,60,.56) 0%, rgba(176,61,33,.42) 38%, rgba(103,38,23,.3) 64%, rgba(61,24,17,.14) 82%, transparent 94%); filter: blur(26px); opacity: 1; }
+.signal-glow { position: absolute; top: 50%; left: 50%; width: 118.5vw; height: 118.5vh; transform: translate(-50%,-50%); border-radius: 50%; background: radial-gradient(ellipse at center, rgba(241,100,60,.56) 0%, rgba(176,61,33,.42) 38%, rgba(103,38,23,.3) 64%, rgba(61,24,17,.14) 82%, transparent 94%); filter: blur(26px); opacity: 1; }
 .signal-field { position: absolute; top: 0; bottom: 0; width: clamp(190px, 23vw, 390px); overflow: hidden; mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent); }
 .signal-left { left: 0; }
 .signal-right { right: 0; }
