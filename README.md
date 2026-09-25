@@ -31,6 +31,7 @@ Then replace the placeholder value with your OpenAI API key. The key stays on th
 - Audio is streamed through the local server for transcription. The server does not store audio on disk.
 - The last 30 completed transcripts are kept in this browser's localStorage, with debounced edits. They are not synced to a server. Clearing browser data removes them. Use Export for a durable copy.
 - Transcription needs network access and a server-side API key with access and billing enabled. The app itself and fonts run locally. The server uses `gpt-transcribe` by default.
+- The online deployment limits `/api` requests to 10 per 10 minutes per IP through a Vercel Firewall rule. Realtime connections require a same-origin browser request and are capped at 65 seconds of PCM audio, 600 chunks, and 90 seconds of connection time. Uploaded files are limited to 4 MB. These limits reduce casual abuse; this public demo does not have user accounts or a per-user quota.
 - The server binds to `127.0.0.1` only. Mobile-responsive CSS is included; accessing this localhost server from a physical phone requires a separate HTTPS development setup, since microphone access requires a secure context.
 - Native dialogs provide modal focus management, Escape dismissal, and focus return. Controls have accessible labels, visible focus, and reduced-motion support. Motion-only hover effects are gated on pointer capability.
 
